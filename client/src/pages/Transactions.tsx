@@ -22,7 +22,43 @@ export default function Transactions() {
         setTransactions(data);
     }
 
+    const handleFileUpload = async(e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+
+        if(!files || files.length === 0){
+            console.log('No files were uploaded.')
+            return;
+        }
+
+        const formData = new FormData;
+
+        for (let i = 0; i < files.length; i++){
+            formData.append('files', files[i], files[i].name);
+        }
+
+        console.log(formData);
+
+        try{
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+            
+            if(!response.ok) {
+                throw new Error(`Server responded with status ${response.status}`)
+            }
+
+            const result = await response.text();
+            console.log("Upload result:", result);
+        } catch(err) {
+            console.error("Error uploading files:", err);
+        }
+    }
+
     return (
-        <p>{transactions[0].description}</p>
+        <>
+            <input type="file" id="transaction-data" name="transaction-data" accept=".csv" multiple onChange={handleFileUpload}/>
+            {/* <p>{transactions[0].description}</p> */}
+        </>
     )
 }
