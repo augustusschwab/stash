@@ -3,7 +3,7 @@ import { pool } from './config/connection.js';
 import multer from 'multer';
 import { parse } from 'fast-csv';
 import { Readable } from 'stream';
-import { formattedDates } from './utils/clean-data.js';
+import { formattedDates, amount, description } from './utils/clean-data.js';
 
 const app = express();
 const port = 3000;
@@ -23,26 +23,45 @@ const storage = multer.memoryStorage();
 const upload = multer({storage: storage});
 
 
-app.post('/api/upload', upload.array('files'), function(req, res){
+app.post('/api/upload', upload.array('files'), async function(req, res){
+    const cleanedData: any[] = [];
     const files = req.files as Express.Multer.File[];
 
-    for (const file of files){
-        const bufferStream = Readable.from(file.buffer);
-        
-        bufferStream
-            .pipe(parse({headers: true}))
-            .on('data', (row) => {
-                console.log('Parsed row:', row);
-                formattedDates(row);
-                
+    try{
+        for (const file of files){
+            await new Promise<void>((resolve, reject) => {
+                const bufferStream = Readable.from(file.buffer);
+                bufferStream
+                .pipe(parse({headers: true, ignoreEmpty:true}))
+                .on('data', (row) => {
+                    try{
+                        let date = formattedDates(row);
+                        let amt = amount(row);
+                        let desc = description(row);
 
-            })
-            .on('end', () => {
-                console.log('Parse complete.');
+                        cleanedData.push({
+                            date,
+                            description: desc,
+                            category: '',
+                            account: '',
+                            amount: amt,
+                            verified: false,
+                        })
+
+                    } catch (e) {
+                        console.log('Bad row.', e)
+                    }  
+                })
+                .on('error', reject)
+                .on('end', resolve);
             });
+        }
+        return res.json({rows: cleanedData});
+    } catch (err) {
+        console.error('Parse error:', err)
+        return res.status(500).json({error: 'Failed to parse upload'})
     }
-
-    res.send('CSV parsed.');
+   
 } )
 
 app.listen(port, () => {

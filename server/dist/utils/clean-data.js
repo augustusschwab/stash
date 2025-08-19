@@ -42,5 +42,37 @@ export function formattedDates(data) {
             dateFormatted = `${year}-${month}-${day}`;
         }
     }
-    console.log(`Formatted Date: ${dateFormatted}`);
+    //console.log(`Formatted Date: ${dateFormatted}`);
+    return dateFormatted;
+}
+//Find amount.
+export function amount(data) {
+    let vals = Object.values(data);
+    const ids = ['amount', 'debit', 'credit', 'transaction', 'value'];
+    for (let i = 0; i < vals.length; i++) {
+        if (!isNaN(Number(vals[i])) && vals[i] != '') {
+            let key = Object.keys(data).find(key => data[key] === vals[i]);
+            if (key === undefined) {
+                throw new Error('No headers were found for the data.');
+            }
+            else if (ids.find(id => key
+                .toLowerCase()
+                .split(' ')
+                .find(word => word == id))) {
+                //console.log(`This is the transaction amount: ${vals[i]} and it is labeled: ${key}`);
+                return vals[i];
+            }
+        }
+    }
+    return null;
+}
+//Find description
+export function description(data) {
+    const ids = ['name', 'description', 'action', 'transaction description'];
+    for (const key in data) {
+        if (ids.some(id => id === key.toLowerCase())) {
+            return data[key];
+        }
+    }
+    return null;
 }
